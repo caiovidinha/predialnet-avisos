@@ -5,7 +5,7 @@ function TargetTag({ target }) {
   const styles = {
     GLOBAL: 'bg-purple-50 text-purple-700 border-purple-200',
     CIDADE: 'bg-blue-50 text-blue-700 border-blue-200',
-    BAIRRO: 'bg-teal-50 text-teal-700 border-teal-200',
+    BAIRRO_CIDADE: 'bg-teal-50 text-teal-700 border-teal-200',
     CEP: 'bg-orange-50 text-orange-700 border-orange-200',
     CEP_NUMERO: 'bg-amber-50 text-amber-700 border-amber-200',
     CLIENTE: 'bg-rose-50 text-rose-700 border-rose-200',
@@ -16,7 +16,7 @@ function TargetTag({ target }) {
   switch (type) {
     case 'GLOBAL': label = '🌐 Todos os usuários'; break
     case 'CIDADE': label = `🏙️ ${value}`; break
-    case 'BAIRRO': label = `🏘️ ${value}`; break
+    case 'BAIRRO_CIDADE': { const [b, c] = value.split(':'); label = `🏘️ ${b}${c ? ` · ${c}` : ''}`; break }
     case 'CEP': label = `🛣️ CEP ${formatCep(value)}`; break
     case 'CEP_NUMERO': label = `🏢 ${value}`; break
     case 'CLIENTE': label = `👤 CPF ${formatCpf(value)}`; break
@@ -40,12 +40,19 @@ export function TargetTags({ targets = [] }) {
   }
 
   // Collapse multiple CLIENTE targets
-  const nonCliente = targets.filter(t => t.targeting_type !== 'CLIENTE')
+  const nonCliente = targets.filter(t => t.targeting_type !== 'CLIENTE' && t.targeting_type !== 'CEP')
   const clienteCount = targets.filter(t => t.targeting_type === 'CLIENTE').length
+  const cepTargets = targets.filter(t => t.targeting_type === 'CEP')
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {nonCliente.map((t) => <TargetTag key={t.id} target={t} />)}
+      {cepTargets.length === 1 && <TargetTag key={cepTargets[0].id} target={cepTargets[0]} />}
+      {cepTargets.length > 1 && (
+        <span className="inline-flex items-center text-xs px-2 py-0.5 border bg-orange-50 text-orange-700 border-orange-200">
+          {`🛣️ Rua · ${cepTargets.length} CEPs`}
+        </span>
+      )}
       {clienteCount > 0 && (
         <span className="inline-flex items-center text-xs px-2 py-0.5 border bg-rose-50 text-rose-700 border-rose-200">
           {clienteCount === 1

@@ -167,12 +167,12 @@ function initFromAlert(alert) {
     const cepTargets = targets.filter(t => t.targeting_type === 'CEP')
     const ceps = cepTargets.map(t => t.targeting_value)
     addr = { cep: ceps.length === 1 ? ceps[0] : '', logradouro: ceps[0] || '', numero: '', ceps }
-  } else if (types.includes('BAIRRO')) {
+  } else if (types.includes('BAIRRO_CIDADE')) {
     scope = 'BAIRRO'
-    const cidade = targets.find(t => t.targeting_type === 'CIDADE')?.targeting_value || ''
-    const bairro = targets.find(t => t.targeting_type === 'BAIRRO').targeting_value
-    bCidadeNome = cidade; bCidadeSel = cidade
-    bairroNome = bairro; bairroSel = bairro
+    const val = targets.find(t => t.targeting_type === 'BAIRRO_CIDADE').targeting_value
+    const [bairro, cidade] = val.split(':')
+    bCidadeNome = cidade || ''; bCidadeSel = cidade || ''
+    bairroNome = bairro || ''; bairroSel = bairro || ''
   } else if (types.includes('CIDADE')) {
     scope = 'CIDADE'
     const cidade = targets.find(t => t.targeting_type === 'CIDADE').targeting_value
@@ -266,8 +266,7 @@ export default function CreateAlertModal({ onClose, onCreated, showToast, initia
         if (!bCidadeSel.trim()) return setError('Selecione a cidade do bairro.')
         if (!bairroNome.trim()) return setError('Informe o nome do bairro.')
         targets = [
-          { targeting_type: 'CIDADE', targeting_value: bCidadeSel.trim().toUpperCase() },
-          { targeting_type: 'BAIRRO', targeting_value: bairroNome.trim().toUpperCase() },
+          { targeting_type: 'BAIRRO_CIDADE', targeting_value: `${bairroNome.trim()}:${bCidadeSel.trim().toUpperCase()}` },
         ]; break
       case 'RUA': {
         const cepsRua = addr.cep ? [addr.cep] : (addr.ceps?.length > 0 ? addr.ceps : null)
