@@ -13,9 +13,9 @@ const SCOPES = [
   { value: 'CPF',    icon: '👤', label: 'CPF',         desc: 'Cliente específico' },
 ]
 
-const INPUT_CLS = 'w-full bg-[#1a1d23] border border-[#2e3340] rounded px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-blue-500 focus:bg-[#1e2128] transition-colors'
+const INPUT_CLS = 'w-full bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#9c0004] transition-colors'
 const LABEL_CLS = 'block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1'
-const DROP_CLS  = 'absolute z-30 top-full left-0 right-0 mt-0.5 bg-[#1a1d23] border border-[#2e3340] rounded shadow-2xl max-h-52 overflow-y-auto'
+const DROP_CLS  = 'absolute z-30 top-full left-0 right-0 mt-0.5 bg-white border border-gray-200 shadow-2xl max-h-52 overflow-y-auto'
 
 let ibgeCache = null
 async function fetchIbgeCidades() {
@@ -57,7 +57,7 @@ function CidadeField({ value, onChange, onSelect, placeholder }) {
         <ul className={DROP_CLS}>
           {opts.map((c) => (
             <li key={c} onMouseDown={() => { onChange(c); onSelect(c); setOpts([]) }}
-              className="px-3 py-2 text-sm text-gray-200 hover:bg-[#22262f] cursor-pointer border-b border-[#2e3340] last:border-0">
+              className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0">
               {c}
             </li>
           ))}
@@ -71,20 +71,37 @@ function BairroField({ cidade, value, onChange, onSelect }) {
   const [opts, setOpts]       = useState([])
   const [loading, setLoading] = useState(false)
   const ref = useRef(null)
+  const cacheRef = useRef([])
+
+  useEffect(() => {
+    cacheRef.current = []
+    if (!cidade) return
+    Promise.all(
+      ['rua', 'avenida', 'estrada'].map(p =>
+        fetch(`https://viacep.com.br/ws/RJ/${encodeURIComponent(cidade)}/${p}/json/`)
+          .then(r => r.json()).catch(() => [])
+      )
+    ).then(results => {
+      cacheRef.current = [...new Set(results.flat().filter(d => !d.erro && d.bairro).map(d => d.bairro))].sort()
+    }).catch(() => {})
+  }, [cidade])
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const search = useCallback(debounce(async (cid, q) => {
     if (!cid || q.length < 2) { setOpts([]); return }
+    const nq = normalize(q)
+    const fromCache = cacheRef.current.filter(b => normalize(b).includes(nq))
     setLoading(true)
     try {
       const url = `https://viacep.com.br/ws/RJ/${encodeURIComponent(cid)}/${encodeURIComponent(q)}/json/`
       const res = await fetch(url)
       const data = await res.json()
-      if (!Array.isArray(data)) { setOpts([]); return }
-      const bairros = [...new Set(data.filter(d => !d.erro && d.bairro).map(d => d.bairro))].slice(0, 10)
-      setOpts(bairros)
-    } catch { setOpts([]) } finally { setLoading(false) }
-  }, 450), [])
+      const fromApi = Array.isArray(data)
+        ? [...new Set(data.filter(d => !d.erro && d.bairro).map(d => d.bairro))]
+        : []
+      setOpts([...new Set([...fromCache, ...fromApi])].slice(0, 10))
+    } catch { setOpts(fromCache.slice(0, 10)) } finally { setLoading(false) }
+  }, 350), [])
 
   useEffect(() => {
     function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpts([]) }
@@ -100,7 +117,7 @@ function BairroField({ cidade, value, onChange, onSelect }) {
         <input type="text" value={value}
           onChange={(e) => { onChange(e.target.value); onSelect(''); search(cidade, e.target.value) }}
           disabled={disabled}
-          placeholder={disabled ? 'Selecione a cidade primeiro' : 'Ex: Copacabana, Centro, Tijuca...'}
+          placeholder={disabled ? 'Selecione a cidade primeiro' : 'Ex: Icaraí, Copacabana, Centro... ou digite livremente'}
           autoComplete="off"
           className={INPUT_CLS + (disabled ? ' opacity-40 cursor-not-allowed' : '')}
         />
@@ -110,7 +127,7 @@ function BairroField({ cidade, value, onChange, onSelect }) {
         <ul className={DROP_CLS}>
           {opts.map((b) => (
             <li key={b} onMouseDown={() => { onChange(b); onSelect(b); setOpts([]) }}
-              className="px-3 py-2 text-sm text-gray-200 hover:bg-[#22262f] cursor-pointer border-b border-[#2e3340] last:border-0">
+              className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-0">
               {b}
             </li>
           ))}
@@ -121,33 +138,75 @@ function BairroField({ cidade, value, onChange, onSelect }) {
 }
 
 function Spinner() {
-  return <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+  return <div className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 border-2 border-[#9c0004] border-t-transparent rounded-full animate-spin" />
 }
 
-export default function CreateAlertModal({ onClose, onCreated, showToast }) {
-  const [title, setTitle]   = useState('')
-  const [msg, setMsg]       = useState('')
-  const [timeout, setTimeout_] = useState(10)
-  const [scope, setScope]   = useState('GLOBAL')
+function initFromAlert(alert) {
+  const targets = alert.targets || []
+  const types = targets.map(t => t.targeting_type)
+  let scope = 'GLOBAL'
+  let cidadeNome = '', cidadeSel = ''
+  let bCidadeNome = '', bCidadeSel = '', bairroNome = '', bairroSel = ''
+  let cpfValue = ''
+  let addr = { cep: '', logradouro: '', numero: '', ceps: [] }
+
+  if (types.includes('CLIENTE')) {
+    scope = 'CPF'
+    const digits = targets.find(t => t.targeting_type === 'CLIENTE').targeting_value
+    cpfValue = digits.length === 11
+      ? `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9)}`
+      : digits
+  } else if (types.includes('CEP_NUMERO')) {
+    scope = 'PREDIO'
+    const cepNumTargets = targets.filter(t => t.targeting_type === 'CEP_NUMERO')
+    const ceps = cepNumTargets.map(t => t.targeting_value.split(':')[0])
+    const numero = cepNumTargets[0]?.targeting_value.split(':')[1] || ''
+    addr = { cep: ceps[0] || '', logradouro: ceps[0] || '', numero, ceps }
+  } else if (types.includes('CEP')) {
+    scope = 'RUA'
+    const cepTargets = targets.filter(t => t.targeting_type === 'CEP')
+    const ceps = cepTargets.map(t => t.targeting_value)
+    addr = { cep: ceps.length === 1 ? ceps[0] : '', logradouro: ceps[0] || '', numero: '', ceps }
+  } else if (types.includes('BAIRRO')) {
+    scope = 'BAIRRO'
+    const cidade = targets.find(t => t.targeting_type === 'CIDADE')?.targeting_value || ''
+    const bairro = targets.find(t => t.targeting_type === 'BAIRRO').targeting_value
+    bCidadeNome = cidade; bCidadeSel = cidade
+    bairroNome = bairro; bairroSel = bairro
+  } else if (types.includes('CIDADE')) {
+    scope = 'CIDADE'
+    const cidade = targets.find(t => t.targeting_type === 'CIDADE').targeting_value
+    cidadeNome = cidade; cidadeSel = cidade
+  }
+  return { scope, cidadeNome, cidadeSel, bCidadeNome, bCidadeSel, bairroNome, bairroSel, cpfValue, addr }
+}
+
+export default function CreateAlertModal({ onClose, onCreated, showToast, initialAlert }) {
+  const init = initialAlert ? initFromAlert(initialAlert) : null
+
+  const [title, setTitle]   = useState(init ? initialAlert.title : '')
+  const [msg, setMsg]       = useState(init ? initialAlert.msg_cliente : '')
+  const [timeout, setTimeout_] = useState(init ? initialAlert.timeout_sec : 10)
+  const [scope, setScope]   = useState(init ? init.scope : 'GLOBAL')
   const [error, setError]   = useState('')
   const [loading, setLoading] = useState(false)
   const titleRef = useRef(null)
 
   // CIDADE scope
-  const [cidadeNome, setCidadeNome]   = useState('')
-  const [cidadeSel, setCidadeSel]     = useState('')
+  const [cidadeNome, setCidadeNome]   = useState(init?.cidadeNome ?? '')
+  const [cidadeSel, setCidadeSel]     = useState(init?.cidadeSel ?? '')
 
   // BAIRRO scope
-  const [bCidadeNome, setBCidadeNome] = useState('')
-  const [bCidadeSel, setBCidadeSel]   = useState('')
-  const [bairroNome, setBairroNome]   = useState('')
-  const [bairroSel, setBairroSel]     = useState('')
+  const [bCidadeNome, setBCidadeNome] = useState(init?.bCidadeNome ?? '')
+  const [bCidadeSel, setBCidadeSel]   = useState(init?.bCidadeSel ?? '')
+  const [bairroNome, setBairroNome]   = useState(init?.bairroNome ?? '')
+  const [bairroSel, setBairroSel]     = useState(init?.bairroSel ?? '')
 
   // CPF scope
-  const [cpfValue, setCpfValue] = useState('')
+  const [cpfValue, setCpfValue] = useState(init?.cpfValue ?? '')
 
   // RUA / PREDIO scope
-  const [addr, setAddr] = useState({ cep: '', logradouro: '', numero: '' })
+  const [addr, setAddr] = useState(init?.addr ?? { cep: '', logradouro: '', numero: '', ceps: [] })
 
   useEffect(() => { titleRef.current?.focus() }, [])
   useEffect(() => {
@@ -162,19 +221,27 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
       case 'CIDADE': return cidadeSel
         ? `Clientes da cidade <strong>${cidadeSel.toUpperCase()}</strong>.`
         : 'Selecione uma <strong>cidade</strong>.'
-      case 'BAIRRO': return (bCidadeSel && bairroSel)
-        ? `Clientes do bairro <strong>${bairroSel.toUpperCase()}</strong> — ${bCidadeSel.toUpperCase()}.`
+      case 'BAIRRO': return (bCidadeSel && bairroNome)
+        ? `Clientes do bairro <strong>${bairroNome.toUpperCase()}</strong> — ${bCidadeSel.toUpperCase()}.`
         : 'Selecione <strong>cidade e bairro</strong>.'
       case 'CPF': {
         const d = cpfValue.replace(/\D/g, '')
         return d.length === 11 ? `Cliente CPF <strong>${cpfValue}</strong>.` : 'Informe o <strong>CPF</strong>.'
       }
-      case 'RUA': return addr.cep
-        ? `Rua <strong>${addr.logradouro}</strong>.`
-        : 'Selecione uma <strong>rua</strong> no autocomplete.'
-      case 'PREDIO': return (addr.cep && addr.numero)
-        ? `<strong>${addr.logradouro}, Nº ${addr.numero}</strong>.`
-        : 'Selecione rua e informe o <strong>número</strong>.'
+      case 'RUA': {
+        const hasCep = addr.cep || addr.ceps?.length > 0
+        if (!hasCep) return 'Selecione uma <strong>rua</strong> no autocomplete.'
+        if (!addr.cep && addr.ceps?.length > 0)
+          return `Todos os CEPs — <strong>${addr.logradouro}</strong> (${addr.ceps.length} CEPs).`
+        return `Rua <strong>${addr.logradouro}</strong> · CEP ${addr.cep}.`
+      }
+      case 'PREDIO': {
+        const hasCep = addr.cep || addr.ceps?.length > 0
+        if (!hasCep) return 'Selecione uma <strong>rua</strong> no autocomplete.'
+        if (!addr.numero?.trim()) return 'Informe o <strong>número</strong>.'
+        const count = addr.ceps?.length || 1
+        return `<strong>${addr.logradouro}, Nº ${addr.numero}</strong> · ${count} CEP${count > 1 ? 's' : ''}.`
+      }
       default: return ''
     }
   }
@@ -202,13 +269,20 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
           { targeting_type: 'CIDADE', targeting_value: bCidadeSel.trim().toUpperCase() },
           { targeting_type: 'BAIRRO', targeting_value: bairroNome.trim().toUpperCase() },
         ]; break
-      case 'RUA':
-        if (!addr.cep) return setError('Selecione uma rua no autocomplete.')
-        targets = [{ targeting_type: 'CEP', targeting_value: addr.cep.replace(/\D/g, '') }]; break
-      case 'PREDIO':
-        if (!addr.cep)           return setError('Selecione uma rua no autocomplete.')
-        if (!addr.numero.trim()) return setError('Informe o número do imóvel.')
-        targets = [{ targeting_type: 'CEP_NUMERO', targeting_value: `${addr.cep.replace(/\D/g, '')}:${addr.numero.trim()}` }]; break
+      case 'RUA': {
+        const cepsRua = addr.cep ? [addr.cep] : (addr.ceps?.length > 0 ? addr.ceps : null)
+        if (!cepsRua) return setError('Selecione uma rua no autocomplete.')
+        targets = cepsRua.map(c => ({ targeting_type: 'CEP', targeting_value: c.replace(/\D/g, '') }))
+        break
+      }
+      case 'PREDIO': {
+        const hasCep = addr.cep || addr.ceps?.length > 0
+        if (!hasCep)               return setError('Selecione uma rua no autocomplete.')
+        if (!addr.numero?.trim())  return setError('Informe o número do imóvel.')
+        const cepsPredi = addr.ceps?.length > 0 ? addr.ceps : [addr.cep]
+        targets = cepsPredi.map(c => ({ targeting_type: 'CEP_NUMERO', targeting_value: `${c.replace(/\D/g, '')}:${addr.numero.trim()}` }))
+        break
+      }
       case 'CPF': {
         const digits = cpfValue.replace(/\D/g, '')
         if (digits.length !== 11) return setError('Informe um CPF válido com 11 dígitos.')
@@ -220,13 +294,15 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
 
     setLoading(true)
     try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
+      const url = initialAlert ? `/api/messages/${initialAlert.id}` : '/api/messages'
+      const method = initialAlert ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: title.trim(), msg_cliente: msg.trim(), timeout_sec: timeout, targets }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Erro ao criar alerta.')
+      if (!res.ok) throw new Error(data.error || (initialAlert ? 'Erro ao editar alerta.' : 'Erro ao criar alerta.'))
       onCreated()
     } catch (err) {
       setError(err.message)
@@ -240,26 +316,26 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
       className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-[#0f1117] border border-[#2e3340] rounded w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl">
+      <div className="bg-white border border-gray-200 w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-[#2e3340] bg-[#14161b] shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-1 h-5 bg-blue-500 rounded-full" />
-            <span className="text-sm font-bold uppercase tracking-widest text-white">Novo Alerta</span>
+            <div className="w-1 h-5 bg-[#9c0004]" />
+            <span className="text-sm font-bold uppercase tracking-widest text-gray-900">{initialAlert ? 'Editar Alerta' : 'Novo Alerta'}</span>
           </div>
           <button onClick={onClose}
-            className="text-gray-600 hover:text-white transition text-lg leading-none px-1 cursor-pointer">✕</button>
+            className="text-gray-400 hover:text-gray-900 transition text-lg leading-none px-1 cursor-pointer">✕</button>
         </div>
 
         {/* ── Body ── */}
         <form onSubmit={handleSubmit} id="create-form"
-          className="overflow-y-auto flex-1 flex flex-col divide-y divide-[#2e3340]">
+          className="overflow-y-auto flex-1 flex flex-col divide-y divide-gray-200">
 
           {/* Título */}
           <div className="px-5 py-4">
             <label className={LABEL_CLS}>
-              Título <span className="normal-case tracking-normal font-normal text-gray-600">— uso interno</span>
+              Título <span className="normal-case tracking-normal font-normal text-gray-400">— uso interno</span>
             </label>
             <input ref={titleRef} type="text" value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -277,7 +353,7 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
               placeholder="Ex: Manutenção na sua região hoje das 14h às 18h."
               className={INPUT_CLS + ' resize-none'}
             />
-            <div className="text-right text-xs text-gray-600 mt-1">{msg.length}/500</div>
+            <div className="text-right text-xs text-gray-400 mt-1">{msg.length}/500</div>
           </div>
 
           {/* Duração */}
@@ -286,9 +362,9 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
             <input type="number" value={timeout}
               onChange={(e) => setTimeout_(Number(e.target.value))}
               min={5} max={120}
-              className="w-20 bg-[#1a1d23] border border-[#2e3340] rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+              className="w-20 bg-white border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#9c0004] transition-colors"
             />
-            <span className="text-xs text-gray-500">segundos (5–120)</span>
+            <span className="text-xs text-gray-400">segundos (5–120)</span>
           </div>
 
           {/* Público-alvo */}
@@ -302,14 +378,14 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
                     onChange={() => setScope(s.value)}
                     className="sr-only"
                   />
-                  <div className={`border rounded px-2 py-2.5 text-center transition cursor-pointer ${
+                  <div className={`border px-2 py-2.5 text-center transition cursor-pointer ${
                     scope === s.value
-                      ? 'border-blue-500 bg-blue-500/10 text-white'
-                      : 'border-[#2e3340] bg-[#1a1d23] text-gray-400 hover:border-gray-500 hover:text-gray-200'
+                      ? 'border-[#9c0004] bg-[#9c0004]/10 text-[#9c0004]'
+                      : 'border-gray-200 bg-[#f5f5f5] text-gray-500 hover:border-gray-400 hover:text-gray-700'
                   }`}>
                     <div className="text-base mb-1">{s.icon}</div>
                     <div className="text-xs font-semibold leading-none">{s.label}</div>
-                    <div className="text-[10px] text-gray-600 mt-0.5 leading-tight">{s.desc}</div>
+                    <div className="text-[10px] text-gray-400 mt-0.5 leading-tight">{s.desc}</div>
                   </div>
                 </label>
               ))}
@@ -365,29 +441,29 @@ export default function CreateAlertModal({ onClose, onCreated, showToast }) {
           )}
 
           {/* Preview */}
-          <div className="px-5 py-3 bg-[#14161b] flex items-start gap-3">
-            <span className="text-xs font-bold uppercase tracking-widest text-gray-600 shrink-0 mt-0.5">Alvo</span>
-            <p className="text-sm text-gray-300 leading-relaxed"
+          <div className="px-5 py-3 bg-gray-50 flex items-start gap-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-500 shrink-0 mt-0.5">Alvo</span>
+            <p className="text-sm text-gray-600 leading-relaxed"
               dangerouslySetInnerHTML={{ __html: buildPreview() }} />
           </div>
 
           {/* Erro */}
           {error && (
-            <div className="px-5 py-3 bg-red-950/40 border-t border-red-800/40">
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="px-5 py-3 bg-red-50 border-t border-red-200">
+              <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
         </form>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-[#2e3340] bg-[#14161b] shrink-0">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
           <button type="button" onClick={onClose}
-            className="px-4 py-2 text-sm rounded border border-[#2e3340] bg-[#1a1d23] hover:bg-[#22262f] text-gray-400 hover:text-white transition cursor-pointer">
+            className="px-4 py-2 text-sm border border-gray-300 bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 transition cursor-pointer">
             Cancelar
           </button>
           <button type="submit" form="create-form" disabled={loading}
-            className="px-5 py-2 text-sm rounded bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white font-bold transition">
-            {loading ? 'Criando...' : 'Criar e Ativar'}
+            className="px-5 py-2 text-sm bg-[#9c0004] hover:bg-[#7a0003] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white font-bold transition">
+            {loading ? (initialAlert ? 'Salvando...' : 'Criando...') : (initialAlert ? 'Salvar Alterações' : 'Criar e Ativar')}
           </button>
         </div>
       </div>

@@ -23,6 +23,7 @@ export default function Dashboard() {
   // Modals
   const [createOpen, setCreateOpen] = useState(false)
   const [detailAlert, setDetailAlert] = useState(null)
+  const [editAlert, setEditAlert] = useState(null)
   const [confirm, setConfirm] = useState(null) // { title, text, onOk }
 
   // Toast
@@ -103,24 +104,24 @@ export default function Dashboard() {
   const totalPages = Math.ceil(total / PAGE_LIMIT)
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-950">
+    <div className="min-h-screen flex flex-col bg-[#f5f5f5]">
       {/* Header */}
-      <header className="bg-gray-900 border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-blue-500 text-lg">Predialnet</span>
-          <span className="text-gray-600">|</span>
-          <span className="text-gray-300 text-sm font-medium">Painel de Alertas</span>
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
+        <div className="flex items-center gap-3">
+          <img src="/img/logo.webp" alt="Predialnet" className="h-7 w-auto" />
+          <span className="text-gray-400">|</span>
+          <span className="text-gray-500 text-sm font-medium">Painel de Alertas</span>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setCreateOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition cursor-pointer"
+            className="bg-[#9c0004] hover:bg-[#7a0003] text-white text-sm font-semibold px-4 py-2 transition cursor-pointer"
           >
             + Novo Alerta
           </button>
           <button
             onClick={handleLogout}
-            className="text-gray-400 hover:text-white text-sm px-3 py-2 rounded-lg hover:bg-gray-800 transition cursor-pointer"
+            className="text-gray-500 hover:text-gray-900 text-sm px-3 py-2 hover:bg-gray-100 transition cursor-pointer"
           >
             Sair
           </button>
@@ -135,24 +136,24 @@ export default function Dashboard() {
             { label: 'Ativos', value: ativos },
             { label: 'Inativos', value: inativos },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-900 rounded-xl border border-gray-800 px-4 py-4 flex flex-col items-center">
-              <span className="text-2xl font-bold text-white">{loading ? '–' : value}</span>
-              <span className="text-xs text-gray-400 mt-0.5">{label}</span>
+            <div key={label} className="bg-white border border-gray-200 px-4 py-4 flex flex-col items-center">
+              <span className="text-2xl font-bold text-gray-900">{loading ? '–' : value}</span>
+              <span className="text-xs text-gray-500 mt-0.5">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Toolbar */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 p-1">
             {['ativos', 'todos'].map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition capitalize cursor-pointer ${
+                className={`px-4 py-1.5 text-sm font-medium transition capitalize cursor-pointer ${
                   filter === f
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-[#9c0004] text-white'
+                    : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
                 {f === 'ativos' ? 'Ativos' : 'Todos'}
@@ -163,7 +164,7 @@ export default function Dashboard() {
           <button
             onClick={() => loadAlerts(page)}
             title="Atualizar lista"
-            className="p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition cursor-pointer"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition cursor-pointer"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -174,7 +175,7 @@ export default function Dashboard() {
         {/* Alert list */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3" />
+            <div className="w-8 h-8 border-2 border-[#9c0004] border-t-transparent rounded-full animate-spin mb-3" />
             <p className="text-sm">Carregando alertas...</p>
           </div>
         ) : alerts.length === 0 ? (
@@ -185,7 +186,7 @@ export default function Dashboard() {
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <p>Nenhum alerta encontrado.</p>
-            <button onClick={() => setCreateOpen(true)} className="text-sm text-blue-400 hover:underline cursor-pointer">
+            <button onClick={() => setCreateOpen(true)} className="text-sm text-[#9c0004] hover:underline cursor-pointer">
               Criar o primeiro alerta
             </button>
           </div>
@@ -203,15 +204,15 @@ export default function Dashboard() {
             <button
               onClick={() => loadAlerts(page - 1)}
               disabled={page <= 1}
-              className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer rounded-lg transition"
+              className="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
             >
               ‹ Anterior
             </button>
-            <span className="text-sm text-gray-400">Página {page} de {totalPages}</span>
+            <span className="text-sm text-gray-500">Página {page} de {totalPages}</span>
             <button
               onClick={() => loadAlerts(page + 1)}
               disabled={page >= totalPages}
-              className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer rounded-lg transition"
+              className="px-3 py-1.5 text-sm bg-gray-200 hover:bg-gray-300 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition"
             >
               Próxima ›
             </button>
@@ -228,12 +229,22 @@ export default function Dashboard() {
         />
       )}
 
+      {editAlert && (
+        <CreateAlertModal
+          initialAlert={editAlert}
+          onClose={() => setEditAlert(null)}
+          onCreated={() => { setEditAlert(null); loadAlerts(page); showToast('Alerta atualizado com sucesso!') }}
+          showToast={showToast}
+        />
+      )}
+
       {detailAlert && (
         <DetailModal
           alert={detailAlert}
           onClose={() => setDetailAlert(null)}
           onToggle={() => handleToggle(detailAlert)}
           onDelete={() => handleDelete(detailAlert)}
+          onEdit={() => { setEditAlert(detailAlert); setDetailAlert(null) }}
         />
       )}
 
