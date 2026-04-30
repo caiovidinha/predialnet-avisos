@@ -40,8 +40,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm bg-white shadow-lg p-8 border border-gray-200">
         {/* Brand */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <Image src="/img/logo.webp" alt="Predialnet" width={220} height={40} className="h-10 w-auto" />
-          <p className="text-sm text-gray-500">Painel de Alertas</p>
+          <p className="text-sm text-gray-500">Painel de Alertas - App Predialnet</p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
