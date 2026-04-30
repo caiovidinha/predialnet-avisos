@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -39,7 +40,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm bg-white shadow-lg p-8 border border-gray-200">
         {/* Brand */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <img src="/img/logo.webp" alt="Predialnet" className="h-10 w-auto" />
+          <Image src="/img/logo.webp" alt="Predialnet" width={220} height={40} className="h-10 w-auto" />
           <p className="text-sm text-gray-500">Painel de Alertas</p>
         </div>
 
