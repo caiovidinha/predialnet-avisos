@@ -9,7 +9,7 @@ const TARGETING_TYPES = [
   { value: 'CLIENTE',      icon: '👤', label: 'CPF',       desc: 'Um cliente específico (por CPF)' },
   { value: 'CIDADE',       icon: '🏙️', label: 'Cidade',    desc: 'Todos os clientes de uma cidade' },
   { value: 'BAIRRO_CIDADE',icon: '🏘️', label: 'Bairro',    desc: 'Clientes de um bairro em uma cidade' },
-  { value: 'CEP',          icon: '�️', label: 'Rua / CEP', desc: 'Clientes na rua (por CEP)' },
+  { value: 'CEP',          icon: '📍', label: 'Rua / CEP', desc: 'Clientes na rua (por CEP)' },
   { value: 'CEP_NUMERO',   icon: '🏠', label: 'Endereço',  desc: 'Endereço exato (CEP + número)' },
 ]
 
