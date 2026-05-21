@@ -7,11 +7,15 @@ import CreateAlertModal from './CreateAlertModal'
 import DetailModal from './DetailModal'
 import ConfirmDialog from './ConfirmDialog'
 import Toast from './Toast'
+import PushTab from './PushTab'
 
 const PAGE_LIMIT = 10
 
 export default function Dashboard() {
   const router = useRouter()
+
+  // Active tab
+  const [activeTab, setActiveTab] = useState('alertas') // 'alertas' | 'push'
 
   // List state
   const [alerts, setAlerts] = useState([])
@@ -112,13 +116,34 @@ export default function Dashboard() {
           <span className="text-gray-400">|</span>
           <span className="text-gray-500 text-sm font-medium">Painel de Alertas</span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="bg-[#9c0004] hover:bg-[#7a0003] text-white text-sm font-semibold px-4 py-2 transition cursor-pointer"
-          >
-            + Novo Alerta
-          </button>
+        <div className="flex items-center gap-3">
+          {/* Tab navigation */}
+          <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 p-1">
+            {[
+              { key: 'alertas', label: 'Alertas' },
+              { key: 'push',    label: 'Push' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`px-4 py-1.5 text-sm font-medium transition cursor-pointer ${
+                  activeTab === key
+                    ? 'bg-[#9c0004] text-white'
+                    : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTab === 'alertas' && (
+            <button
+              onClick={() => setCreateOpen(true)}
+              className="bg-[#9c0004] hover:bg-[#7a0003] text-white text-sm font-semibold px-4 py-2 transition cursor-pointer"
+            >
+              + Novo Alerta
+            </button>
+          )}
           <button
             onClick={handleLogout}
             className="text-gray-500 hover:text-gray-900 text-sm px-3 py-2 hover:bg-gray-100 transition cursor-pointer"
@@ -129,6 +154,11 @@ export default function Dashboard() {
       </header>
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
+        {/* Push tab */}
+        {activeTab === 'push' && <PushTab showToast={showToast} />}
+
+        {/* Alerts tab */}
+        {activeTab === 'alertas' && <>
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">
           {[
@@ -218,6 +248,7 @@ export default function Dashboard() {
             </button>
           </div>
         )}
+        </> /* end alertas tab */}
       </main>
 
       {/* Modals */}
