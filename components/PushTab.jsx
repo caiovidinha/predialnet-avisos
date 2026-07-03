@@ -230,16 +230,27 @@ export default function PushTab({ showToast }) {
 
       {/* Body */}
       <div>
-        <label className={LABEL_CLS}>Mensagem</label>
+        <div className="flex items-center justify-between mb-1">
+          <label className={LABEL_CLS + ' mb-0'}>Mensagem</label>
+
+          <span
+            className={`text-xs ${
+              body.length >= 150 ? 'text-[#9c0004] font-semibold' : 'text-gray-400'
+            }`}
+          >
+            {body.length}/150
+          </span>
+        </div>
+
         <textarea
           value={body}
-          onChange={e => setBody(e.target.value)}
-          maxLength={300}
+          onChange={(e) => setBody(e.target.value)}
+          maxLength={150}
           rows={3}
           placeholder="Texto da notificação..."
           className={INPUT_CLS + ' resize-none'}
         />
-      </div>
+     </div>  
 
       {/* Targeting type */}
       <div>
