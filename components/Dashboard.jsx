@@ -8,6 +8,7 @@ import DetailModal from './DetailModal'
 import ConfirmDialog from './ConfirmDialog'
 import Toast from './Toast'
 import PushTab from './PushTab'
+import PushHistoricoTab from './PushHistoricoTab'
 
 const PAGE_LIMIT = 10
 
@@ -15,7 +16,7 @@ export default function Dashboard() {
   const router = useRouter()
 
   // Active tab
-  const [activeTab, setActiveTab] = useState('alertas') // 'alertas' | 'push'
+  const [activeTab, setActiveTab] = useState('alertas') // 'alertas' | 'push' | 'push-historico'
 
   // List state
   const [alerts, setAlerts] = useState([])
@@ -122,6 +123,7 @@ export default function Dashboard() {
             {[
               { key: 'alertas', label: 'Alertas' },
               { key: 'push',    label: 'Push' },
+              { key: 'push-historico', label: 'Histórico de Pushes' },
             ].map(({ key, label }) => (
               <button
                 key={key}
@@ -156,6 +158,9 @@ export default function Dashboard() {
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 py-6 flex flex-col gap-5">
         {/* Push tab */}
         {activeTab === 'push' && <PushTab showToast={showToast} />}
+
+        {/* Push history tab */}
+        {activeTab === 'push-historico' && <PushHistoricoTab showToast={showToast} />}
 
         {/* Alerts tab */}
         {activeTab === 'alertas' && <>
