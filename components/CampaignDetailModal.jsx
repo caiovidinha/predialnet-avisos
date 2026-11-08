@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { formatDate, maskCpf, maskToken } from '@/lib/utils'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { formatDate, maskCpf, maskToken, debounce } from '@/lib/utils'
 
 const PAGE_LIMIT = 15
 
@@ -19,13 +19,15 @@ export default function CampaignDetailModal({ campaign, onClose, showToast }) {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('todos')
+  const [cpfBusca, setCpfBusca] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const load = useCallback(async (p = 1, st = status) => {
+  const load = useCallback(async (p = 1, st = status, cpf = cpfBusca) => {
     setLoading(true)
     try {
       const params = new URLSearchParams({ page: String(p), limit: String(PAGE_LIMIT) })
       if (st !== 'todos') params.set('status', st)
+      if (cpf.trim()) params.set('cpf', cpf.trim())
       const res = await fetch(`/api/sistema-push/campanhas/${campaign.id}/destinatarios?${params}`)
       if (!res.ok) throw new Error('Erro ao buscar destinatários')
       const data = await res.json()
@@ -37,9 +39,16 @@ export default function CampaignDetailModal({ campaign, onClose, showToast }) {
     } finally {
       setLoading(false)
     }
-  }, [campaign.id, status, showToast])
+  }, [campaign.id, status, cpfBusca, showToast])
 
-  useEffect(() => { load(1, status) }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(1, status, cpfBusca) }, [status]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Busca por CPF digitado inteiro (a pessoa pode saber o CPF mesmo com a
+  // coluna mascarada na tela) — com debounce pra não disparar 1 request por tecla.
+  const buscarPorCpf = useMemo(
+    () => debounce((valor) => load(1, status, valor), 400),
+    [load, status],
+  )
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -71,18 +80,28 @@ export default function CampaignDetailModal({ campaign, onClose, showToast }) {
             ))}
           </div>
 
-          <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 p-1 self-start">
-            {STATUS_FILTROS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setStatus(f)}
-                className={`px-3 py-1 text-xs font-medium transition capitalize cursor-pointer ${
-                  status === f ? 'bg-[#9c0004] text-white' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                {f === 'todos' ? 'Todos' : STATUS_LABELS[f]?.label ?? f}
-              </button>
-            ))}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-gray-100 border border-gray-200 p-1">
+              {STATUS_FILTROS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setStatus(f)}
+                  className={`px-3 py-1 text-xs font-medium transition capitalize cursor-pointer ${
+                    status === f ? 'bg-[#9c0004] text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {f === 'todos' ? 'Todos' : STATUS_LABELS[f]?.label ?? f}
+                </button>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              value={cpfBusca}
+              onChange={(e) => { setCpfBusca(e.target.value); buscarPorCpf(e.target.value) }}
+              placeholder="Buscar por CPF..."
+              className="px-3 py-1.5 text-xs border border-gray-300 focus:border-[#9c0004] focus:outline-none w-44"
+            />
           </div>
 
           {loading ? (
